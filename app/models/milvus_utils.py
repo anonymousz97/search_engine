@@ -1,4 +1,3 @@
-from milvus import Milvus, IndexType, MetricType
 from pymilvus import (
     connections,
     utility,
@@ -8,13 +7,18 @@ from pymilvus import (
     Collection,
 )
 import random
+import os, hashlib
+
+def get_id():
+    return hashlib.md5(os.urandom(32)).hexdigest()
 
 # # Connect to Milvus server
 # milvus = Milvus(host='localhost', port='19530')
 
 def create_collection_first_time(uuid, emb_size):
     fields = [
-        FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=False),
+        FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
+        FieldSchema(name="id", dtype=DataType.STRING, description="unique id for each vector"),
         FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=emb_size)
     ]
     schema = CollectionSchema(fields=fields, description=f"collection for uuid {uuid}")
@@ -22,23 +26,26 @@ def create_collection_first_time(uuid, emb_size):
 
     # insert vector 0 sample points
     entities = [
-        [0],  # field pk
+        ["123"],  # field id
         [[0] * emb_size],  # field embeddings
     ]
     insert_result = clt.insert(entities)
     clt.flush()  
 
 
-
-
 # Insert vectors into a collection
-def insert_vectors(connection, collection_name, vectors):
-    status, ids = connection.insert(collection_name=collection_name, records=vectors)
-    if status.OK():
-        print(f"Vectors inserted successfully. IDs: {ids}")
-    else:
-        print(f"Failed to insert vectors: {status.message}")
+def insert_vectors(collection_name, vectors):
+    '''vector sample 
+    [
+        ["123"],  # field id
+        [[0] * emb_size],  # field embeddings
+    ]
+    '''
+    clt = Collection(name=collection_name)
 
+    status = clt.insert(vectors)
+    return status
+    
 # Search vectors in a collection
 def search_vectors(connection, collection_name, query_vector, top_k):
     param = {
