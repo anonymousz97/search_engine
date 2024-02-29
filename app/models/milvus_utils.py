@@ -13,24 +13,42 @@ def get_id():
     return hashlib.md5(os.urandom(32)).hexdigest()
 
 # # Connect to Milvus server
-# milvus = Milvus(host='localhost', port='19530')
+# milvus = MilvusModel(host='localhost', port='19530')
+# print(milvus.ping())
 
-def create_collection_first_time(uuid, emb_size):
+def create_collection_first_time(uuid, emb_size, load_in_memory=True):
     fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
-        FieldSchema(name="id", dtype=DataType.STRING, description="unique id for each vector"),
+        FieldSchema(name="id", dtype=DataType.VARCHAR, description="unique id for each vector", max_length=128),
         FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=emb_size)
     ]
     schema = CollectionSchema(fields=fields, description=f"collection for uuid {uuid}")
     clt = Collection(name=uuid, schema=schema)
 
-    # insert vector 0 sample points
-    entities = [
-        ["123"],  # field id
-        [[0] * emb_size],  # field embeddings
-    ]
-    insert_result = clt.insert(entities)
-    clt.flush()  
+    index_params = {
+        "index_type": "IVF_FLAT",
+        "metric_type": "COSINE",
+        "params": {
+            "nlist": 128
+        }
+    }
+
+    clt.create_index(
+        field_name="embeddings",
+        index_params=index_params,
+        index_name="index_0"
+    )
+
+    if load_in_memory:
+        clt.load()
+
+    # # insert vector 0 sample points
+    # entities = [
+    #     ["123"],  # field id
+    #     [[0] * emb_size],  # field embeddings
+    # ]
+    # insert_result = clt.insert(entities)
+    # clt.flush()  
 
 
 # Insert vectors into a collection
@@ -41,9 +59,15 @@ def insert_vectors(collection_name, vectors):
         [[0] * emb_size],  # field embeddings
     ]
     '''
-    clt = Collection(name=collection_name)
+    try:
+        clt = Collection(name=collection_name)
+    except Exception as e:
+        create_collection_first_time(collection_name, len(vectors[1][0]))
+        clt = Collection(name=collection_name)
+
 
     status = clt.insert(vectors)
+    clt.flush()
     return status
     
 # Search vectors in a collection
@@ -75,3 +99,13 @@ def drop_collection(connection, collection_name):
         print(f"Collection '{collection_name}' dropped successfully")
     else:
         print(f"Failed to drop collection: {status.message}")
+
+def find_by_ids(collection_name, id):
+    clt = Collection(name=collection_name)
+    res = clt.query(
+        expr=f"id in ['{id[0]}']", 
+        output_fields=["id", "embeddings"],
+        consistency_level="Strong"
+    )
+    print(res)
+    
