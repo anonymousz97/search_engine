@@ -20,7 +20,8 @@ def create_collection_first_time(uuid, emb_size, load_in_memory=True):
     fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
         FieldSchema(name="id", dtype=DataType.VARCHAR, description="unique id for each vector", max_length=128),
-        FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=emb_size)
+        FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=emb_size),
+        FieldSchema(name="chunks", dtype=DataType.VARCHAR, description="chunk data", max_length=65530)
     ]
     schema = CollectionSchema(fields=fields, description=f"collection for uuid {uuid}")
     clt = Collection(name=uuid, schema=schema)
@@ -101,10 +102,12 @@ def drop_collection(connection, collection_name):
         print(f"Failed to drop collection: {status.message}")
 
 def find_by_ids(collection_name, id):
+    lst_ids = ','.join(f"'{x}'" for x in id)
+    print(lst_ids)
     clt = Collection(name=collection_name)
     res = clt.query(
-        expr=f"id in ['{id[0]}']", 
-        output_fields=["id", "embeddings"],
+        expr=f"id in [{lst_ids}]", 
+        output_fields=["id", "embeddings","chunks"],
         consistency_level="Strong"
     )
     print(res)

@@ -39,11 +39,14 @@ class MilvusModel:
         # insert chunks by batch size
         for i in range(0, len(chunks), batch_size):
             batch = chunks[i:i+batch_size]
+            batch = [x['content'] for x in batch]
+            print(batch)
             emb = self.search_model.encode(batch)
             batch_id = [milvus_utils.get_id() for x in batch]
             vectors = [
                 batch_id,
-                emb
+                emb,
+                batch
             ]
             status = milvus_utils.insert_vectors(collection_name, vectors)
             print(status)
@@ -60,4 +63,4 @@ milvus = MilvusModel(host='localhost', port='19530', search_model=search_model)
 
 # Cuối tháng 1/2024, Cơ quan CSĐT Bộ Công an có kết luận điều tra bổ sung. Trong đó, cơ quan điều tra xác định, giá trị tài sản mà ông Trần Quí Thanh cùng 2 con gái chiếm đoạt của 4 bị hại là 1.040 tỷ đồng, còn kết luận điều tra lần đầu chỉ xác định là 767 tỷ đồng."""}, {"full_title": "test2", "full_content": "test2"}], max_chunk_size=256)
 # milvus.ping()
-milvus_utils.find_by_ids("test", ["666df145a6a72eaa192485c7d7a0e2c9"])
+milvus_utils.find_by_ids("test", ["9401a227d060cb5d020974ee37e1f0a6","bc4554a699619250e7fb4d2dbad80d4c"])

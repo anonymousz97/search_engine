@@ -15,11 +15,11 @@ class MySQLModel:
         query = query[:-2] + ')'
         self.cursor.execute(query)
 
-    def get_user(self, table_name, article_id):
+    def get_articleId(self, table_name, article_id):
         self.cursor.execute(f'SELECT * FROM {table_name} WHERE article_id={article_id}')
         return self.cursor.fetchone()
 
-    def get_all_users(self, table_name='default'):
+    def get_all_article(self, table_name='default'):
         self.cursor.execute(f'SELECT * FROM {table_name}')
         return self.cursor.fetchall()
 
@@ -34,3 +34,15 @@ class MySQLModel:
         self.cursor.executemany(query, values)
         self.connection.commit()
         return self.cursor.rowcount
+
+    def update(self, table_name, data_list):
+        for data in data_list:
+            query = f'UPDATE {table_name} SET '
+            for key, value in data.items():
+                query += f'{key} = {value}, '
+            query = query[:-2] + f' WHERE id = {data["id"]}'
+            self.cursor.execute(query)
+        self.connection.commit()
+        return self.cursor.rowcount
+    
+    
